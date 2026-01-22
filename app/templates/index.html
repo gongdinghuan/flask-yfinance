@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>yfinance 股票分析平台</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome -->
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <!-- 统一的 Tailwind 配置 -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#3b82f6',
+                        secondary: '#64748b',
+                        success: '#10b981',
+                        warning: '#f59e0b',
+                        danger: '#ef4444',
+                        dark: '#1e293b',
+                        light: '#f8fafc'
+                    },
+                    fontFamily: {
+                        inter: ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .content-auto {
+                content-visibility: auto;
+            }
+            .glass {
+                background: rgba(255, 255, 255, 0.1);
+                backdrop-filter: blur(10px);
+                border: 1px solid rgba(255, 255, 255, 0.2);
+            }
+            .card-hover {
+                transition: all 0.3s ease;
+            }
+            .card-hover:hover {
+                transform: translateY(-5px);
+                box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+            }
+        }
+    </style>
+</head>
+<body class="font-inter bg-gray-50 min-h-screen">
+    <!-- 导航栏 -->
+    <nav class="bg-white shadow-md sticky top-0 z-50">
+        <div class="container mx-auto px-4 py-3 flex justify-between items-center">
+            <div class="flex items-center space-x-2">
+                <i class="fa fa-line-chart text-primary text-2xl"></i>
+                <h1 class="text-xl font-bold text-dark">yfinance 股票分析</h1>
+            </div>
+            <div class="flex items-center space-x-6">
+                <a href="#dashboard" class="text-gray-600 hover:text-primary transition-colors">
+                    <i class="fa fa-dashboard mr-1"></i> 仪表盘
+                </a>
+                <a href="#markets" class="text-gray-600 hover:text-primary transition-colors">
+                    <i class="fa fa-globe mr-1"></i> 市场
+                </a>
+                <a href="#financials" class="text-gray-600 hover:text-primary transition-colors">
+                    <i class="fa fa-money mr-1"></i> 财务
+                </a>
+                <a href="#about" class="text-gray-600 hover:text-primary transition-colors">
+                    <i class="fa fa-info-circle mr-1"></i> 关于
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主内容 -->
+    <main class="container mx-auto px-4 py-8">
+        <!-- 搜索区域 -->
+        <section class="mb-12 text-center">
+            <h2 class="text-3xl font-bold text-dark mb-6">股票数据搜索</h2>
+            <div class="max-w-2xl mx-auto">
+                <div class="flex flex-col md:flex-row gap-4">
+                    <input 
+                        type="text" 
+                        id="stock-symbol" 
+                        placeholder="输入股票代码 (例如: AAPL, MSFT)" 
+                        class="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                    >
+                    <button 
+                        id="search-btn" 
+                        class="px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors font-medium"
+                    >
+                        <i class="fa fa-search mr-2"></i> 搜索
+                    </button>
+                </div>
+                <div class="mt-4 text-sm text-gray-500">
+                    热门股票: <a href="#" class="stock-suggestion text-primary hover:underline mx-1">AAPL</a>
+                    <a href="#" class="stock-suggestion text-primary hover:underline mx-1">MSFT</a>
+                    <a href="#" class="stock-suggestion text-primary hover:underline mx-1">GOOGL</a>
+                    <a href="#" class="stock-suggestion text-primary hover:underline mx-1">AMZN</a>
+                    <a href="#" class="stock-suggestion text-primary hover:underline mx-1">TSLA</a>
+                </div>
+            </div>
+        </section>
+
+        <!-- 加载状态 -->
+        <div id="loading" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div class="bg-white p-6 rounded-lg shadow-lg flex items-center space-x-4">
+                <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-primary"></div>
+                <p class="text-lg font-medium">加载中...</p>
+            </div>
+        </div>
+
+        <!-- 股票信息卡片 -->
+        <section id="stock-info" class="hidden mb-12">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- 基本信息卡片 -->
+                <div class="lg:col-span-2">
+                    <div class="bg-white rounded-xl shadow-md p-6 card-hover">
+                        <div class="flex justify-between items-start mb-4">
+                            <div>
+                                <h3 class="text-2xl font-bold text-dark" id="stock-name">Apple Inc.</h3>
+                                <p class="text-lg text-gray-500" id="stock-symbol-display">AAPL</p>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-3xl font-bold text-dark" id="stock-price">$198.75</p>
+                                <p class="text-sm text-gray-500" id="stock-change">+1.25 (0.63%)</p>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
+                            <div class="text-center p-3 bg-gray-50 rounded-lg">
+                                <p class="text-sm text-gray-500">市值</p>
+                                <p class="font-semibold" id="market-cap">$3.12T</p>
+                            </div>
+                            <div class="text-center p-3 bg-gray-50 rounded-lg">
+                                <p class="text-sm text-gray-500">PE 比率</p>
+                                <p class="font-semibold" id="pe-ratio">28.5</p>
+                            </div>
+                            <div class="text-center p-3 bg-gray-50 rounded-lg">
+                                <p class="text-sm text-gray-500">股息收益率</p>
+                                <p class="font-semibold" id="dividend-yield">0.52%</p>
+                            </div>
+                            <div class="text-center p-3 bg-gray-50 rounded-lg">
+                                <p class="text-sm text-gray-500">Beta</p>
+                                <p class="font-semibold" id="beta">1.23</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 行业信息卡片 -->
+                <div>
+                    <div class="bg-white rounded-xl shadow-md p-6 card-hover">
+                        <h4 class="font-semibold text-lg mb-4">公司信息</h4>
+                        <ul class="space-y-3">
+                            <li class="flex justify-between">
+                                <span class="text-gray-500">行业</span>
+                                <span id="sector" class="font-medium">Technology</span>
+                            </li>
+                            <li class="flex justify-between">
+                                <span class="text-gray-500">子行业</span>
+                                <span id="industry" class="font-medium">Consumer Electronics</span>
+                            </li>
+                            <li class="flex justify-between">
+                                <span class="text-gray-500">国家</span>
+                                <span id="country" class="font-medium">United States</span>
+                            </li>
+                            <li class="flex justify-between">
+                                <span class="text-gray-500">52周最高</span>
+                                <span id="year-high" class="font-medium">$207.05</span>
+                            </li>
+                            <li class="flex justify-between">
+                                <span class="text-gray-500">52周最低</span>
+                                <span id="year-low" class="font-medium">$146.04</span>
+                            </li>
+                        </ul>
+                        <div class="mt-4 pt-4 border-t border-gray-200">
+                            <a href="#" id="website-link" class="text-primary hover:underline flex items-center">
+                                <i class="fa fa-external-link mr-2"></i> 公司网站
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 图表区域 -->
+        <section id="charts" class="hidden mb-12">
+            <div class="bg-white rounded-xl shadow-md p-6">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-xl font-bold text-dark">价格走势</h3>
+                    <div class="flex space-x-2">
+                        <button class="time-range-btn px-3 py-1 border border-gray-300 rounded-md text-sm hover:bg-gray-100 transition-colors" data-period="1d">1天</button>
+                        <button class="time-range-btn px-3 py-1 border border-gray-300 rounded-md text-sm hover:bg-gray-100 transition-colors" data-period="1w">1周</button>
+                        <button class="time-range-btn px-3 py-1 border border-gray-300 rounded-md text-sm hover:bg-gray-100 transition-colors active bg-primary text-white border-primary" data-period="1mo">1月</button>
+                        <button class="time-range-btn px-3 py-1 border border-gray-300 rounded-md text-sm hover:bg-gray-100 transition-colors" data-period="3mo">3月</button>
+                        <button class="time-range-btn px-3 py-1 border border-gray-300 rounded-md text-sm hover:bg-gray-100 transition-colors" data-period="1y">1年</button>
+                    </div>
+                </div>
+                <div class="h-80">
+                    <canvas id="price-chart"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <!-- 财务数据 -->
+        <section id="financials" class="hidden mb-12">
+            <div class="bg-white rounded-xl shadow-md p-6">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-xl font-bold text-dark">财务报表</h3>
+                    <div class="flex border-b border-gray-200">
+                        <button class="financial-tab px-4 py-2 border-b-2 border-primary text-primary font-medium" data-tab="income">利润表</button>
+                        <button class="financial-tab px-4 py-2 border-b-2 border-transparent text-gray-500 hover:text-gray-700" data-tab="balance">资产负债表</button>
+                        <button class="financial-tab px-4 py-2 border-b-2 border-transparent text-gray-500 hover:text-gray-700" data-tab="cash">现金流量表</button>
+                    </div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200" id="financial-table">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">项目</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">2023</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">2022</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">2021</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200" id="financial-data">
+                            <!-- 财务数据将通过 JavaScript 动态填充 -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- 市场信息 -->
+        <section id="markets" class="mb-12">
+            <h3 class="text-2xl font-bold text-dark mb-6">市场概览</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div class="bg-white rounded-xl shadow-md p-6 card-hover">
+                    <div class="flex justify-between items-center mb-4">
+                        <h4 class="font-semibold">美国市场</h4>
+                        <i class="fa fa-usd text-green-500"></i>
+                    </div>
+                    <div class="text-center">
+                        <p class="text-2xl font-bold" id="us-status">OPEN</p>
+                        <p class="text-sm text-gray-500">NYSE, NASDAQ</p>
+                    </div>
+                </div>
+                <div class="bg-white rounded-xl shadow-md p-6 card-hover">
+                    <div class="flex justify-between items-center mb-4">
+                        <h4 class="font-semibold">欧洲市场</h4>
+                        <i class="fa fa-euro text-blue-500"></i>
+                    </div>
+                    <div class="text-center">
+                        <p class="text-2xl font-bold" id="europe-status">CLOSED</p>
+                        <p class="text-sm text-gray-500">FTSE, DAX</p>
+                    </div>
+                </div>
+                <div class="bg-white rounded-xl shadow-md p-6 card-hover">
+                    <div class="flex justify-between items-center mb-4">
+                        <h4 class="font-semibold">亚洲市场</h4>
+                        <i class="fa fa-jpy text-red-500"></i>
+                    </div>
+                    <div class="text-center">
+                        <p class="text-2xl font-bold" id="asia-status">CLOSED</p>
+                        <p class="text-sm text-gray-500">NIKKEI, HSI</p>
+                    </div>
+                </div>
+                <div class="bg-white rounded-xl shadow-md p-6 card-hover">
+                    <div class="flex justify-between items-center mb-4">
+                        <h4 class="font-semibold">加密货币</h4>
+                        <i class="fa fa-bitcoin text-orange-500"></i>
+                    </div>
+                    <div class="text-center">
+                        <p class="text-2xl font-bold" id="crypto-status">ACTIVE</p>
+                        <p class="text-sm text-gray-500">24/7 Trading</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 关于部分 -->
+        <section id="about" class="mb-12">
+            <h3 class="text-2xl font-bold text-dark mb-6">关于 yfinance</h3>
+            <div class="bg-white rounded-xl shadow-md p-6">
+                <p class="text-gray-700 mb-4">
+                    yfinance 是一个开源 Python 库，用于从 Yahoo! Finance API 获取金融市场数据。它提供了简单易用的接口来下载历史市场数据、获取股票信息、管理缓存等功能。
+                </p>
+                <p class="text-gray-700 mb-4">
+                    本演示应用使用 Flask 构建后端 API，前端使用 HTML、Tailwind CSS 和 Chart.js 实现数据可视化，展示了 yfinance 库的核心功能。
+                </p>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+                    <div class="text-center p-4 bg-gray-50 rounded-lg">
+                        <i class="fa fa-database text-primary text-2xl mb-2"></i>
+                        <h4 class="font-semibold mb-1">历史数据</h4>
+                        <p class="text-sm text-gray-500">下载股票历史价格数据</p>
+                    </div>
+                    <div class="text-center p-4 bg-gray-50 rounded-lg">
+                        <i class="fa fa-bar-chart text-primary text-2xl mb-2"></i>
+                        <h4 class="font-semibold mb-1">实时分析</h4>
+                        <p class="text-sm text-gray-500">实时市场数据和分析</p>
+                    </div>
+                    <div class="text-center p-4 bg-gray-50 rounded-lg">
+                        <i class="fa fa-file-text text-primary text-2xl mb-2"></i>
+                        <h4 class="font-semibold mb-1">财务报表</h4>
+                        <p class="text-sm text-gray-500">获取公司财务数据</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- 页脚 -->
+    <footer class="bg-gray-800 text-white py-8">
+        <div class="container mx-auto px-4">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div>
+                    <h4 class="text-lg font-semibold mb-4">yfinance 股票分析</h4>
+                    <p class="text-gray-400">基于 yfinance 库构建的股票数据可视化工具，提供实时市场数据和分析功能。</p>
+                </div>
+                <div>
+                    <h4 class="text-lg font-semibold mb-4">快速链接</h4>
+                    <ul class="space-y-2">
+                        <li><a href="#dashboard" class="text-gray-400 hover:text-white transition-colors">仪表盘</a></li>
+                        <li><a href="#markets" class="text-gray-400 hover:text-white transition-colors">市场</a></li>
+                        <li><a href="#financials" class="text-gray-400 hover:text-white transition-colors">财务</a></li>
+                        <li><a href="#about" class="text-gray-400 hover:text-white transition-colors">关于</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="text-lg font-semibold mb-4">联系我们</h4>
+                    <ul class="space-y-2">
+                        <li class="flex items-center">
+                            <i class="fa fa-envelope mr-2 text-gray-400"></i>
+                            <span class="text-gray-400">contact@example.com</span>
+                        </li>
+                        <li class="flex items-center">
+                            <i class="fa fa-github mr-2 text-gray-400"></i>
+                            <span class="text-gray-400">github.com/yfinance</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            <div class="mt-8 pt-6 border-t border-gray-700 text-center text-gray-400">
+                <p>&copy; 2026 yfinance 股票分析平台. 保留所有权利.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- JavaScript -->
+    <script>
+        // 全局变量
+        let currentSymbol = '';
+        let priceChart = null;
+        let financialData = {};
+
+        // DOM 元素
+        const elements = {
+            stockSymbol: document.getElementById('stock-symbol'),
+            searchBtn: document.getElementById('search-btn'),
+            stockInfo: document.getElementById('stock-info'),
+            charts: document.getElementById('charts'),
+            financials: document.getElementById('financials'),
+            loading: document.getElementById('loading'),
+            stockName: document.getElementById('stock-name'),
+            stockSymbolDisplay: document.getElementById('stock-symbol-display'),
+            stockPrice: document.getElementById('stock-price'),
+            stockChange: document.getElementById('stock-change'),
+            marketCap: document.getElementById('market-cap'),
+            peRatio: document.getElementById('pe-ratio'),
+            dividendYield: document.getElementById('dividend-yield'),
+            beta: document.getElementById('beta'),
+            sector: document.getElementById('sector'),
+            industry: document.getElementById('industry'),
+            country: document.getElementById('country'),
+            yearHigh: document.getElementById('year-high'),
+            yearLow: document.getElementById('year-low'),
+            websiteLink: document.getElementById('website-link'),
+            priceChart: document.getElementById('price-chart'),
+            financialTable: document.getElementById('financial-table'),
+            financialData: document.getElementById('financial-data'),
+            timeRangeBtns: document.querySelectorAll('.time-range-btn'),
+            financialTabs: document.querySelectorAll('.financial-tab'),
+            stockSuggestions: document.querySelectorAll('.stock-suggestion')
+        };
+
+        // 显示加载状态
+        function showLoading() {
+            elements.loading.classList.remove('hidden');
+        }
+
+        // 隐藏加载状态
+        function hideLoading() {
+            elements.loading.classList.add('hidden');
+        }
+
+        // 格式化数字
+        function formatNumber(num) {
+            if (typeof num === 'number') {
+                if (num >= 1e12) {
+                    return '$' + (num / 1e12).toFixed(2) + 'T';
+                } else if (num >= 1e9) {
+                    return '$' + (num / 1e9).toFixed(2) + 'B';
+                } else if (num >= 1e6) {
+                    return '$' + (num / 1e6).toFixed(2) + 'M';
+                } else {
+                    return '$' + num.toFixed(2);
+                }
+            }
+            return num;
+        }
+
+        // 获取股票信息
+        async function getStockInfo(symbol) {
+            showLoading();
+            try {
+                const response = await fetch(`/api/ticker/${symbol}`);
+                if (!response.ok) {
+                    throw new Error(`API 请求失败: ${response.status}`);
+                }
+                const data = await response.json();
+                
+                // 更新 UI
+                elements.stockName.textContent = data.name;
+                elements.stockSymbolDisplay.textContent = data.symbol;
+                elements.stockPrice.textContent = formatNumber(data.currentPrice);
+                elements.marketCap.textContent = formatNumber(data.marketCap);
+                elements.peRatio.textContent = data.peRatio;
+                elements.dividendYield.textContent = data.dividendYield ? (data.dividendYield * 100).toFixed(2) + '%' : 'N/A';
+                elements.beta.textContent = data.beta;
+                elements.sector.textContent = data.sector;
+                elements.industry.textContent = data.industry;
+                elements.country.textContent = data.country;
+                elements.yearHigh.textContent = formatNumber(data.yearHigh);
+                elements.yearLow.textContent = formatNumber(data.yearLow);
+                
+                if (data.website) {
+                    elements.websiteLink.href = data.website;
+                    elements.websiteLink.target = '_blank';
+                }
+                
+                elements.stockInfo.classList.remove('hidden');
+                currentSymbol = symbol;
+                
+                // 获取历史数据
+                await getStockHistory(symbol, '1mo');
+                
+                // 获取财务数据
+                await getStockFinancials(symbol);
+                
+            } catch (error) {
+                alert('获取股票信息失败: ' + error.message);
+            } finally {
+                hideLoading();
+            }
+        }
+
+        // 获取股票历史数据
+        async function getStockHistory(symbol, period) {
+            try {
+                const response = await fetch(`/api/ticker/${symbol}/history?period=${period}`);
+                if (!response.ok) {
+                    throw new Error(`API 请求失败: ${response.status}`);
+                }
+                const data = await response.json();
+                
+                // 更新图表
+                updatePriceChart(data);
+                elements.charts.classList.remove('hidden');
+                
+            } catch (error) {
+                console.error('获取历史数据失败:', error);
+            }
+        }
+
+        // 获取股票财务数据
+        async function getStockFinancials(symbol) {
+            try {
+                const response = await fetch(`/api/ticker/${symbol}/financials`);
+                if (!response.ok) {
+                    throw new Error(`API 请求失败: ${response.status}`);
+                }
+                const data = await response.json();
+                financialData = data;
+                elements.financials.classList.remove('hidden');
+                updateFinancialTable('income');
+            } catch (error) {
+                console.error('获取财务数据失败:', error);
+            }
+        }
+
+        // 更新价格图表
+        function updatePriceChart(data) {
+            const ctx = elements.priceChart.getContext('2d');
+            
+            // 销毁现有图表
+            if (priceChart) {
+                priceChart.destroy();
+            }
+            
+            // 准备数据
+            const dates = data.data.map(item => item.date);
+            const prices = data.data.map(item => item.close);
+            
+            // 创建新图表
+            priceChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: dates,
+                    datasets: [{
+                        label: '收盘价',
+                        data: prices,
+                        borderColor: '#3b82f6',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 0,
+                        pointHoverRadius: 5
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false,
+                            callbacks: {
+                                label: function(context) {
+                                    return `价格: $${context.parsed.y.toFixed(2)}`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: {
+                                display: false
+                            }
+                        },
+                        y: {
+                            beginAtZero: false,
+                            grid: {
+                                borderDash: [2, 4]
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // 更新财务表格
+        function updateFinancialTable(type) {
+            if (!financialData[type === 'income' ? 'income_statement' : type === 'balance' ? 'balance_sheet' : 'cash_flow']) {
+                elements.financialData.innerHTML = '<tr><td colspan="4" class="px-6 py-4 text-center text-gray-500">暂无财务数据</td></tr>';
+                return;
+            }
+            
+            const data = financialData[type === 'income' ? 'income_statement' : type === 'balance' ? 'balance_sheet' : 'cash_flow'];
+            let html = '';
+            
+            data.forEach(item => {
+                html += '<tr class="hover:bg-gray-50">';
+                html += `<td class="px-6 py-4 whitespace-nowrap font-medium">${item.item}</td>`;
+                
+                // 获取所有年份
+                const years = Object.keys(item).filter(key => key !== 'item');
+                years.forEach(year => {
+                    const value = item[year];
+                    html += `<td class="px-6 py-4 whitespace-nowrap">${value ? formatNumber(value) : '-'}</td>`;
+                });
+                
+                html += '</tr>';
+            });
+            
+            elements.financialData.innerHTML = html;
+        }
+
+        // 事件监听器
+        document.addEventListener('DOMContentLoaded', function() {
+            // 搜索按钮点击
+            elements.searchBtn.addEventListener('click', function() {
+                const symbol = elements.stockSymbol.value.trim().toUpperCase();
+                if (symbol) {
+                    getStockInfo(symbol);
+                } else {
+                    alert('请输入股票代码');
+                }
+            });
+
+            // 回车键搜索
+            elements.stockSymbol.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    elements.searchBtn.click();
+                }
+            });
+
+            // 股票代码建议
+            elements.stockSuggestions.forEach(suggestion => {
+                suggestion.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const symbol = this.textContent;
+                    elements.stockSymbol.value = symbol;
+                    getStockInfo(symbol);
+                });
+            });
+
+            // 时间范围按钮
+            elements.timeRangeBtns.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    // 更新按钮样式
+                    elements.timeRangeBtns.forEach(b => {
+                        b.classList.remove('active', 'bg-primary', 'text-white', 'border-primary');
+                        b.classList.add('border-gray-300');
+                    });
+                    this.classList.add('active', 'bg-primary', 'text-white', 'border-primary');
+                    this.classList.remove('border-gray-300');
+                    
+                    // 获取历史数据
+                    if (currentSymbol) {
+                        const period = this.dataset.period;
+                        getStockHistory(currentSymbol, period);
+                    }
+                });
+            });
+
+            // 财务标签切换
+            elements.financialTabs.forEach(tab => {
+                tab.addEventListener('click', function() {
+                    // 更新标签样式
+                    elements.financialTabs.forEach(t => {
+                        t.classList.remove('border-primary', 'text-primary');
+                        t.classList.add('border-transparent', 'text-gray-500');
+                    });
+                    this.classList.add('border-primary', 'text-primary');
+                    this.classList.remove('border-transparent', 'text-gray-500');
+                    
+                    // 更新表格
+                    const tabType = this.dataset.tab;
+                    updateFinancialTable(tabType);
+                });
+            });
+
+            // 获取市场状态
+            async function getMarketStatus() {
+                try {
+                    const response = await fetch('/api/market/US');
+                    if (response.ok) {
+                        const data = await response.json();
+                        document.getElementById('us-status').textContent = data.status;
+                    }
+                } catch (error) {
+                    console.error('获取市场状态失败:', error);
+                }
+            }
+            
+            getMarketStatus();
+        });
+    </script>
+</body>
+</html>

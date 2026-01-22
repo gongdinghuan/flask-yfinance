@@ -1,0 +1,2 @@
+[console_scripts]
+flask-yfinance = run:app

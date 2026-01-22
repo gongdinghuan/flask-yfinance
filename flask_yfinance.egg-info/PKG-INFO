@@ -1,0 +1,49 @@
+Metadata-Version: 2.4
+Name: flask-yfinance
+Version: 1.0.0
+Summary: Flask application for yfinance data visualization
+Home-page: https://github.com/yourusername/flask-yfinance
+Author: Your Name
+Author-email: contact@example.com
+License: Apache
+Classifier: Development Status :: 4 - Beta
+Classifier: Environment :: Web Environment
+Classifier: Intended Audience :: Developers
+Classifier: Intended Audience :: Financial and Insurance Industry
+Classifier: License :: OSI Approved :: Apache Software License
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python :: 3.6
+Classifier: Programming Language :: Python :: 3.7
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Topic :: Office/Business :: Financial
+Classifier: Topic :: Office/Business :: Financial :: Investment
+Classifier: Topic :: Software Development :: Libraries :: Python Modules
+Classifier: Topic :: Internet :: WWW/HTTP :: Dynamic Content
+Classifier: Topic :: Internet :: WWW/HTTP :: WSGI :: Application
+Requires-Dist: Flask==3.1.2
+Requires-Dist: Flask-CORS==6.0.2
+Requires-Dist: yfinance==1.0
+Requires-Dist: pandas>=1.3.0
+Requires-Dist: numpy>=1.16.5
+Requires-Dist: requests>=2.31
+Requires-Dist: multitasking>=0.0.7
+Requires-Dist: platformdirs>=2.0.0
+Requires-Dist: pytz>=2022.5
+Requires-Dist: frozendict>=2.3.4
+Requires-Dist: beautifulsoup4>=4.11.1
+Requires-Dist: peewee>=3.16.2
+Requires-Dist: curl_cffi<0.14,>=0.7
+Requires-Dist: protobuf>=3.19.0
+Requires-Dist: websockets>=13.0
+Dynamic: author
+Dynamic: author-email
+Dynamic: classifier
+Dynamic: description
+Dynamic: home-page
+Dynamic: license
+Dynamic: requires-dist
+Dynamic: summary
+
+A Flask web application that provides visualization for financial market data using yfinance library
