@@ -8,9 +8,9 @@ setup(
     version='1.0.0',
     description='Flask application for yfinance data visualization',
     long_description='A Flask web application that provides visualization for financial market data using yfinance library',
-    author='Your Name',
-    author_email='contact@example.com',
-    url='https://github.com/yourusername/flask-yfinance',
+    author='gongdinghuan',
+    author_email='gong363324112@qq.com',
+    url='https://github.com/gongdinghuan/flask-yfinance',
     license='Apache',
     classifiers=[
         'Development Status :: 4 - Beta',
@@ -48,6 +48,8 @@ setup(
         'curl_cffi>=0.7,<0.14',
         'protobuf>=3.19.0',
         'websockets>=13.0',
+        'requests_cache>=1.2.1',
+        'requests_ratelimiter>=0.8.0',
     ],
     entry_points={
         'console_scripts': [
